@@ -6,6 +6,10 @@
   "properties": {
     "strategy": {"type": "string"},
     "strategy_version": {"type": ["string", "null"]},
+    "run_id": {"type": ["string", "null"], "description": "UUID for this run"},
+    "git_sha": {"type": ["string", "null"], "description": "Commit SHA of the code used for the run"},
+    "git_ref": {"type": ["string", "null"], "description": "Git ref (branch or tag)"},
+    "runner": {"type": ["string", "null"], "description": "Runner identifier (local, github-actions)"},
     "symbol": {"type": "string"},
     "params": {"type": "object"},
     "initial_capital": {"type": "number"},
