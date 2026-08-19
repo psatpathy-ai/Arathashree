@@ -29,14 +29,23 @@ The architecture translates principles from *Trading in the Zone* into machine-e
 
 This is deliberately simple. Complexity will only be added if walk-forward evidence justifies it.
 
-## Run
+## Local development
 
 ```bash
-python -m pip install -e .
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -e '.[dev]'
 python -m arthashree.cli backtest --data data/sample_ohlcv.csv --config config/default.json
 python -m arthashree.cli validate --data data/sample_ohlcv.csv --config config/default.json
-pytest -q
+python -m pytest -q
 ```
+
+This project targets Python 3.10+ and uses the repository's existing `pytest` setup from `pyproject.toml`.
+
+## CI
+
+The repository includes a GitHub Actions workflow that runs the test suite automatically on pushes and pull requests.
 
 ## Real NSE data
 
