@@ -1,0 +1,44 @@
+name: Integration (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      sample_data:
+        description: 'Which sample CSV to run (sample1.csv or sample2.csv)'
+        required: false
+        default: 'sample1.csv'
+
+jobs:
+  integration-only:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e '.[dev]'
+
+      - name: Run integration script (normalize + event engine)
+        run: python tools/ci_integration.py "${{ github.event.inputs.sample_data }}"
+
+      - name: Validate generated run-card
+        run: |
+          if [ -f tools/artifacts/summary.json ]; then
+            python tools/validate_run_card.py tools/artifacts/summary.json
+          else
+            echo "No summary.json found; failing"
+            exit 2
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-artifacts
+          path: tools/artifacts
