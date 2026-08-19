@@ -74,9 +74,37 @@ def main():
     engine.run_card_dir = str(artifacts / "run_cards")
     result = engine.run()
 
+    import uuid
+    import subprocess
+    run_id = str(uuid.uuid4())
+    # attempt to get current git sha and ref
+    try:
+        git_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo_root.parent).decode().strip()
+    except Exception:
+        git_sha = None
+    try:
+        git_ref = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=repo_root.parent).decode().strip()
+    except Exception:
+        git_ref = None
+
     summary_path = artifacts / "summary.json"
-    summary = {"metrics": result.metrics(), "trades": result.trades.to_dict(orient="records")}
-    summary_path.write_text(json.dumps(summary, indent=2, default=str))
+    run_card = {
+        "run_id": run_id,
+        "git_sha": git_sha,
+        "git_ref": git_ref,
+        "runner": "ci_integration_local",
+        "strategy": run_card.strategy,
+        "strategy_version": getattr(run_card, 'version', None),
+        "symbol": run_card.symbol,
+        "params": run_card.params,
+        "initial_capital": cfg.get('initial_capital', 100000),
+        "final_equity": result.metrics().get('final_equity') if isinstance(result.metrics(), dict) else None,
+        "start_time": str(df.index[0]) if len(df) else None,
+        "end_time": str(df.index[-1]) if len(df) else None,
+        "metrics": result.metrics(),
+        "trades": result.trades.to_dict(orient="records")
+    }
+    summary_path.write_text(json.dumps(run_card, indent=2, default=str))
     print("Integration run complete. Artifacts in:", artifacts)
 
 
