@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Arthashree Data Manifest",
+  "type": "object",
+  "required": ["source", "symbol", "interval", "row_count", "columns"],
+  "properties": {
+    "source": {"type": "string"},
+    "symbol": {"type": "string"},
+    "interval": {"type": "string"},
+    "start": {"type": ["string", "null"]},
+    "end": {"type": ["string", "null"]},
+    "row_count": {"type": "integer", "minimum": 0},
+    "columns": {"type": "array", "items": {"type": "string"}},
+    "provenance": {
+      "type": ["object", "null"],
+      "properties": {
+        "source": {"type": "string"},
+        "symbol": {"type": "string"},
+        "timestamp": {"type": "string"},
+        "dataset_version": {"type": ["string", "null"]},
+        "source_hash": {"type": ["string", "null"]},
+        "metadata": {"type": "object"}
+      },
+      "required": ["source", "symbol", "timestamp"]
+    },
+    "normalized_csv": {"type": ["string", "null"]},
+    "normalized_parquet": {"type": ["string", "null"]}
+  },
+  "additionalProperties": true
+}
