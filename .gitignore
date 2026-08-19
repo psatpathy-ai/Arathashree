@@ -21,4 +21,4 @@ data/normalized/*
 data/cache/*
 !data/raw/.gitkeep
 !data/normalized/.gitkeep
-!data/cache/.gitkeep
+!data/cache/.gitkeep\n.venv312/
