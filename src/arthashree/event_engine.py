@@ -9,6 +9,8 @@ from .events import MarketEvent, SignalEvent, OrderEvent, FillEvent
 from .strategy_registry import StrategyRegistry, RunCard
 from .risk_engine import RiskEngine, DefaultRiskEngine
 from .backtest import BacktestResult
+from .logging_setup import get_logger
+import time, os, json
 
 
 @dataclass
@@ -20,9 +22,11 @@ class EventBacktester:
     risk_engine: RiskEngine | None = None
 
     def run(self) -> BacktestResult:
-        # Ensure risk engine
+        # Ensure risk engine and logger
         if self.risk_engine is None:
             self.risk_engine = DefaultRiskEngine()
+        logger = get_logger("arthashree.event_engine", extra={"strategy": self.run_card.strategy, "symbol": self.run_card.symbol})
+        logger.info({"evt": "run_start", "strategy": self.run_card.strategy, "symbol": self.run_card.symbol})
 
         equity = float(self.cfg.get("initial_capital", 1_000_000))
         cash = equity
@@ -114,7 +118,10 @@ class EventBacktester:
                             if qty > 0:
                                 order = OrderEvent(timestamp=None, symbol=self.run_card.symbol, direction=target.direction, quantity=qty, price=entry_price, payload={"stop_price": stop})
                                 portfolio = {"equity": cash, "daily_loss": current_daily_loss(trades), "open_positions": []}
+                                # Log the attempted order
+                                logger.info({"evt": "order_attempt", "order": {"symbol": self.run_card.symbol, "qty": qty, "price": entry_price}})
                                 decision = self.risk_engine.approve(order, portfolio, {"stop_price": stop})
+                                logger.info({"evt": "risk_decision", "decision": {"approved": decision.approved, "reason": decision.reason}})
                                 if decision.approved:
                                     entry_value = qty * entry_price
                                     fee = entry_value * commission
@@ -127,6 +134,7 @@ class EventBacktester:
                                         "target": target_price,
                                         "qty": qty,
                                     }
+                                    logger.info({"evt": "order_filled", "entry": entry_price, "qty": qty})
 
             # MTM record
             mtm = cash
@@ -151,4 +159,22 @@ class EventBacktester:
         trades_df = pd.DataFrame(trades)
         if trades_df.empty:
             trades_df = pd.DataFrame(columns=["entry_date", "exit_date", "entry", "exit", "qty", "pnl", "reason"])
+
+        # Write run-card output if configured via self.cfg or attribute
+        run_card_dir = getattr(self, "run_card_dir", None) or self.cfg.get("run_card_dir")
+        if run_card_dir:
+            os.makedirs(run_card_dir, exist_ok=True)
+            ts = time.strftime("%Y%m%dT%H%M%S")
+            out_path = os.path.join(run_card_dir, f"runcard-{self.run_card.strategy}-{ts}.json")
+            summary = {
+                "strategy": self.run_card.strategy,
+                "symbol": self.run_card.symbol,
+                "cfg": {k: self.cfg[k] for k in sorted(self.cfg) if k in ["initial_capital", "risk_per_trade", "max_position_notional_pct"]},
+                "metrics": BacktestResult(equity_df, trades_df).metrics(),
+                "trades": trades_df.to_dict(orient="records"),
+            }
+            open(out_path, "w").write(json.dumps(summary, indent=2, default=str))
+            logger.info({"evt": "run_card_written", "path": out_path})
+
+        logger.info({"evt": "run_end", "strategy": self.run_card.strategy, "symbol": self.run_card.symbol})
         return BacktestResult(equity_df, trades_df)
