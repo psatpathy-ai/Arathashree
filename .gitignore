@@ -1,0 +1,12 @@
+.env
+*.secret
+secrets/
+.venv/
+__pycache__/
+.pytest_cache/
+data/raw/*
+data/normalized/*
+data/cache/*
+!data/raw/.gitkeep
+!data/normalized/.gitkeep
+!data/cache/.gitkeep
