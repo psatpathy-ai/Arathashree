@@ -35,7 +35,26 @@ class BacktestResult:
             "profit_factor": float(pf),
         }
 
-def run_backtest(df, cfg):
+from arthashree.risk_engine import DefaultRiskEngine
+from arthashree.events import OrderEvent
+
+
+def run_backtest(df, cfg, risk_engine: DefaultRiskEngine | None = None):
+    """Simple event-loop backtest with optional risk_engine integration.
+
+    If risk_engine is provided, it will be consulted before placing entries.
+    When no risk_engine is supplied, create a DefaultRiskEngine whose internal
+    RiskModel is seeded from the cfg values so pre-trade sizing logic matches
+    the backtest configuration.
+    """
+    if risk_engine is None:
+        # Seed risk model from cfg to keep sizing consistent with run_backtest
+        from .risk import RiskModel, CostModel
+
+        model = RiskModel(risk_per_trade=cfg.get("risk_per_trade", 0.01), max_position_notional_pct=cfg.get("max_position_notional_pct", 0.25))
+        costs = CostModel(commission_bps=cfg.get("commission_bps", 5.0), slippage_bps=cfg.get("slippage_bps", 10.0))
+        risk_engine = DefaultRiskEngine(model=model, costs=costs)
+
     equity = float(cfg["initial_capital"])
     cash = equity
     position = None
@@ -44,6 +63,15 @@ def run_backtest(df, cfg):
 
     commission = cfg["commission_bps"] / 10000
     slippage = cfg["slippage_bps"] / 10000
+
+    def current_daily_loss(trades_list):
+        # sum of losses (positive number)
+        loss = 0.0
+        for t in trades_list:
+            pnl = float(t.get("pnl", 0.0))
+            if pnl < 0:
+                loss += abs(pnl)
+        return loss
 
     for i, (dt, row) in enumerate(df.iterrows()):
         if position:
@@ -95,17 +123,32 @@ def run_backtest(df, cfg):
                     cfg["max_position_notional_pct"]
                 )
                 if qty > 0:
-                    entry_value = qty * entry
-                    fee = entry_value * commission
-                    cash -= fee
-                    position = {
-                        "entry_dt": df.index[i + 1],
-                        "entry_i": i + 1,
-                        "entry": entry,
-                        "stop": stop,
-                        "target": target,
-                        "qty": qty
+                    # Build a tentative order event and portfolio snapshot
+                    order = OrderEvent(timestamp=None, symbol=None, direction="long", quantity=qty, price=entry, payload={"stop_price": stop})
+                    portfolio = {
+                        "equity": cash,
+                        "daily_loss": current_daily_loss(trades),
+                        "open_positions": [] if position is None else [{
+                            "symbol": None,
+                            "qty": position["qty"],
+                            "entry": position["entry"],
+                            "notional": position["qty"] * position["entry"]
+                        }]
                     }
+                    market = {"stop_price": stop}
+                    decision = risk_engine.approve(order, portfolio, market)
+                    if decision.approved:
+                        entry_value = qty * entry
+                        fee = entry_value * commission
+                        cash -= fee
+                        position = {
+                            "entry_dt": df.index[i + 1],
+                            "entry_i": i + 1,
+                            "entry": entry,
+                            "stop": stop,
+                            "target": target,
+                            "qty": qty
+                        }
 
         mtm = cash
         if position:
