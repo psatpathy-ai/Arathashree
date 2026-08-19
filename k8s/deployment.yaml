@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: arthashree
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: arthashree
+  template:
+    metadata:
+      labels:
+        app: arthashree
+    spec:
+      containers:
+        - name: arthashree
+          image: ghcr.io/<OWNER>/arthashree:latest
+          imagePullPolicy: IfNotPresent
+          command: ["python", "tools/ci_integration.py", "sample1.csv"]
+          volumeMounts:
+            - mountPath: /home/arthuser/app/data
+              name: data
+      volumes:
+        - name: data
+          hostPath:
+            path: /path/to/data
+            type: Directory

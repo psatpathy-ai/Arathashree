@@ -1,0 +1,21 @@
+version: '3.8'
+services:
+  arthashree:
+    build: .
+    container_name: arthashree
+    volumes:
+      - ./:/home/arthuser/app:cached
+      - ./data:/home/arthuser/app/data:cached
+      - ./tools/artifacts:/home/arthuser/app/tools/artifacts
+    command: ["python", "tools/ci_integration.py", "sample1.csv"]
+    environment:
+      - PYTHONUNBUFFERED=1
+    tty: true
+
+  shell:
+    build: .
+    container_name: arthashree-shell
+    volumes:
+      - ./:/home/arthuser/app:cached
+    command: ["/bin/bash"]
+    stdin_open: true
