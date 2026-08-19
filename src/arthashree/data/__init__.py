@@ -10,6 +10,7 @@ from .sources import (
     write_manifest,
 )
 from .validation import REQUIRED_OHLCV_COLUMNS, load_ohlcv, validate_ohlcv
+from .pipeline import normalize_raw, read_manifest
 
 __all__ = [
     "REQUIRED_OHLCV_COLUMNS",
@@ -24,4 +25,6 @@ __all__ = [
     "ParquetDataSource",
     "materialize_manifest",
     "write_manifest",
+    "normalize_raw",
+    "read_manifest",
 ]

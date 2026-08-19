@@ -21,7 +21,9 @@ def main():
     df = add_features(df, cfg)
 
     if args.cmd == "backtest":
-        result = run_backtest(df, cfg)
+        from .risk_engine import DefaultRiskEngine
+        engine = DefaultRiskEngine()
+        result = run_backtest(df, cfg, risk_engine=engine)
         print(json.dumps(result.metrics(), indent=2))
         if len(result.trades):
             result.trades.to_csv("reports/trades.csv", index=False)
