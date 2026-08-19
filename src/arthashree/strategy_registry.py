@@ -31,7 +31,7 @@ class StrategyRegistry:
         self._registry: Dict[str, Type[Strategy]] = {}
         self._meta: Dict[str, Dict[str, Any]] = {}
 
-    def register(self, name: str, cls: Type[Strategy], *, version: str | None = None, description: str | None = None) -> None:
+    def register(self, name: str, cls: Type[Strategy], *, version: str | None = None, description: str | None = None, module_path: str | None = None, class_name: str | None = None) -> None:
         if not issubclass(cls, Strategy):
             raise TypeError("Registered class must be a Strategy subclass")
         self._registry[name] = cls
@@ -39,7 +39,26 @@ class StrategyRegistry:
             "name": name,
             "version": version or getattr(cls, "version", None),
             "description": description or getattr(cls, "__doc__", ""),
+            "module_path": module_path,
+            "class_name": class_name or cls.__name__,
         }
+
+    def register_from_path(self, name: str, module_path: str, class_name: str | None = None, *, version: str | None = None, description: str | None = None):
+        """Dynamically import a strategy class from module_path and register it.
+
+        module_path: importable module path, e.g. 'arthashree.strategies.example_strategy'
+        class_name: name of class inside the module. If omitted, defaults to 'Strategy'
+        """
+        import importlib
+        mod = importlib.import_module(module_path)
+        cls_name = class_name or getattr(mod, 'STRATEGY_CLASS_NAME', None) or 'Strategy'
+        cls = getattr(mod, cls_name, None)
+        if cls is None:
+            raise ImportError(f"Module {module_path} does not define class {cls_name}")
+        # Validate subclass
+        if not issubclass(cls, Strategy):
+            raise TypeError("Imported class must be a Strategy subclass")
+        self.register(name, cls, version=version, description=description, module_path=module_path, class_name=cls_name)
 
     def unregister(self, name: str) -> None:
         if name in self._registry:
