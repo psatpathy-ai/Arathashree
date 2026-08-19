@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Run Card Schema",
+  "type": "object",
+  "required": ["strategy", "symbol", "params", "initial_capital", "start_time", "end_time", "metrics", "trades"],
+  "properties": {
+    "strategy": {"type": "string"},
+    "strategy_version": {"type": ["string", "null"]},
+    "symbol": {"type": "string"},
+    "params": {"type": "object"},
+    "initial_capital": {"type": "number"},
+    "final_equity": {"type": ["number", "null"]},
+    "start_time": {"type": "string", "format": "date-time"},
+    "end_time": {"type": "string", "format": "date-time"},
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "total_return": {"type": "number"},
+        "annualized_return": {"type": ["number", "null"]},
+        "max_drawdown": {"type": "number"},
+        "sharpe": {"type": ["number", "null"]}
+      },
+      "required": ["total_return", "max_drawdown"]
+    },
+    "trades": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["entry_time", "exit_time", "symbol", "qty", "entry_price", "exit_price", "pnl"],
+        "properties": {
+          "entry_time": {"type": "string", "format": "date-time"},
+          "exit_time": {"type": "string", "format": "date-time"},
+          "symbol": {"type": "string"},
+          "qty": {"type": "number"},
+          "entry_price": {"type": "number"},
+          "exit_price": {"type": "number"},
+          "pnl": {"type": "number"},
+          "fees": {"type": ["number", "null"]}
+        }
+      }
+    }
+  }
+}

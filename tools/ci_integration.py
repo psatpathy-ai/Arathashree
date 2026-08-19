@@ -23,8 +23,15 @@ def main():
     artifacts = repo_root / "artifacts"
     artifacts.mkdir(exist_ok=True)
 
-    # Normalize sample data
-    raw = repo_root / "data" / "sample_ohlcv.csv"
+    # choose sample file (argument or default)
+    import sys
+    sample = sys.argv[1] if len(sys.argv) > 1 else "sample1.csv"
+
+    raw = repo_root.parent / "data" / "sample" / sample
+    if not raw.exists():
+        # fall back to sample1
+        raw = repo_root.parent / "data" / "sample" / "sample1.csv"
+
     norm_dest = artifacts / "normalized"
     norm_dest.mkdir(parents=True, exist_ok=True)
     try:

@@ -1,0 +1,28 @@
+{
+  "strategy": "ci_example",
+  "strategy_version": "1.0",
+  "symbol": "CI_SAMPLE",
+  "params": {},
+  "initial_capital": 100000,
+  "final_equity": 100500,
+  "start_time": "2020-01-01T00:00:00Z",
+  "end_time": "2020-01-05T00:00:00Z",
+  "metrics": {
+    "total_return": 0.005,
+    "annualized_return": 0.12,
+    "max_drawdown": 0.01,
+    "sharpe": 1.2
+  },
+  "trades": [
+    {
+      "entry_time": "2020-01-02T00:00:00Z",
+      "exit_time": "2020-01-04T00:00:00Z",
+      "symbol": "CI_SAMPLE",
+      "qty": 10,
+      "entry_price": 100.5,
+      "exit_price": 103.5,
+      "pnl": 30.0,
+      "fees": 0.5
+    }
+  ]
+}
