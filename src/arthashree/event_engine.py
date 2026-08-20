@@ -20,6 +20,7 @@ class EventBacktester:
     strategy_registry: StrategyRegistry
     run_card: RunCard
     risk_engine: RiskEngine | None = None
+    execution_adapter: object | None = None
 
     def run(self) -> BacktestResult:
         # Ensure risk engine and logger
@@ -123,18 +124,44 @@ class EventBacktester:
                                 decision = self.risk_engine.approve(order, portfolio, {"stop_price": stop})
                                 logger.info({"evt": "risk_decision", "decision": {"approved": decision.approved, "reason": decision.reason}})
                                 if decision.approved:
-                                    entry_value = qty * entry_price
-                                    fee = entry_value * commission
-                                    cash -= fee
-                                    position = {
-                                        "entry_dt": self.df.index[i + 1],
-                                        "entry_i": i + 1,
-                                        "entry": entry_price,
-                                        "stop": stop,
-                                        "target": target_price,
-                                        "qty": qty,
-                                    }
-                                    logger.info({"evt": "order_filled", "entry": entry_price, "qty": qty})
+                                    # If an execution adapter is provided, use it to place the order
+                                    if getattr(self, 'execution_adapter', None) is not None:
+                                        try:
+                                            exec_result = self.execution_adapter.send_order(order, portfolio)
+                                        except Exception as e:
+                                            logger.error({"evt": "execution_error", "error": str(e)})
+                                            exec_result = None
+
+                                        if exec_result and getattr(exec_result, 'filled', False):
+                                            entry_price = exec_result.filled_price
+                                            fee = exec_result.fees
+                                            cash -= fee
+                                            filled_qty = exec_result.filled_qty
+                                            position = {
+                                                "entry_dt": self.df.index[i + 1],
+                                                "entry_i": i + 1,
+                                                "entry": entry_price,
+                                                "stop": stop,
+                                                "target": target_price,
+                                                "qty": filled_qty,
+                                            }
+                                            logger.info({"evt": "order_filled", "entry": entry_price, "qty": filled_qty, "adapter": type(self.execution_adapter).__name__})
+                                        else:
+                                            logger.info({"evt": "order_not_filled", "reason": "adapter_returned_unfilled"})
+                                    else:
+                                        # legacy immediate fill behavior
+                                        entry_value = qty * entry_price
+                                        fee = entry_value * commission
+                                        cash -= fee
+                                        position = {
+                                            "entry_dt": self.df.index[i + 1],
+                                            "entry_i": i + 1,
+                                            "entry": entry_price,
+                                            "stop": stop,
+                                            "target": target_price,
+                                            "qty": qty,
+                                        }
+                                        logger.info({"evt": "order_filled", "entry": entry_price, "qty": qty})
 
             # MTM record
             mtm = cash
